@@ -1,0 +1,13 @@
+trust_domain: cipher.local
+
+ca:
+  path: data/ca
+
+services:
+  payment-api:
+    cert: data/payment-api/payment-api.crt
+    key: data/payment-api/payment-api.key
+
+  user-service:
+    cert: data/user-service/user-service.crt
+    key: data/user-service/user-service.key
