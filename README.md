@@ -622,7 +622,7 @@ Cipher is maintained by Darshan Reddy V, offering security architecture and impl
 **Contact:**
 - Email: dharsxn46@gmail.com
 - GitHub: https://github.com/darshhv
-- LinkedIn: Available upon request
+- LinkedIn: https://www.linkedin.com/in/darsh6/
 
 ## Contributing
 
