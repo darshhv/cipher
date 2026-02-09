@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: cipher-security
+Version: 0.1.0
+Requires-Dist: cryptography
+Requires-Dist: PyJWT
+Dynamic: requires-dist
