@@ -1,0 +1,15 @@
+paths:
+  ca_dir: ./data/ca
+  data_dir: ./data
+
+ca:
+  trust_domain: cipher.local
+  key_size: 2048
+  cert_validity_hours: 24
+
+policy:
+  deny_threshold: 0.8
+  throttle_threshold: 0.6
+
+telemetry:
+  db_path: ./data/cipher_audit.db

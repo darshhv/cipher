@@ -6,21 +6,29 @@ def init_cipher():
     from cipher.config import CipherConfig
 
     config = CipherConfig()
-    ca = CertificateAuthority(config.ca_path)
+    ca = CertificateAuthority(config)
     ca.initialize()
 
     print("Cipher initialized successfully.")
 
 
 def enroll_service(service_name):
-    from cipher.ca.certificate_authority import CertificateAuthority
-    from cipher.config import CipherConfig
+    import requests
 
-    config = CipherConfig()
-    ca = CertificateAuthority(config.ca_path)
-    ca.issue_service_certificate(service_name)
+    url = "http://127.0.0.1:9000/v1/certificate"
 
-    print(f"Service '{service_name}' enrolled.")
+    try:
+        resp = requests.post(url, json={"service_name": service_name})
+
+        if resp.status_code == 200:
+            print(f"Service '{service_name}' enrolled via CA API.")
+        else:
+            print("Enrollment failed:", resp.text)
+
+    except Exception as e:
+        print("Could not reach CA server.")
+        print("Start it with: cipher-cli ca-server")
+        print("Error:", e)
 
 
 def run_demo():
@@ -35,13 +43,18 @@ def run_ca_server():
     uvicorn.run(app, host="127.0.0.1", port=9000)
 
 
+def print_usage():
+    print("\nCipher CLI")
+    print("-----------")
+    print("cipher-cli init")
+    print("cipher-cli enroll <service>")
+    print("cipher-cli demo")
+    print("cipher-cli ca-server\n")
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage:")
-        print("  cipher-cli init")
-        print("  cipher-cli enroll <service>")
-        print("  cipher-cli demo")
-        print("  cipher-cli ca-server")
+        print_usage()
         return
 
     cmd = sys.argv[1]
@@ -63,6 +76,7 @@ def main():
 
     else:
         print("Unknown command")
+        print_usage()
 
 
 if __name__ == "__main__":
