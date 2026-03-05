@@ -13,3 +13,10 @@ policy:
 
 telemetry:
   db_path: ./data/cipher_audit.db
+
+api:
+  admin_token: dev-admin-token-change-me
+  token_secret: dev-insecure-secret-change-me
+  token_issuer: cipher-ca
+  token_audience: cipher-ca
+  token_ttl_seconds: 300

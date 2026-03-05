@@ -1,3 +1,4 @@
+import os
 import sys
 
 
@@ -15,15 +16,36 @@ def init_cipher():
 def enroll_service(service_name):
     import requests
 
-    url = "http://127.0.0.1:9000/v1/certificate"
+    admin_token = os.environ.get("CIPHER_ADMIN_TOKEN", "dev-admin-token-change-me")
+    ca_base_url = os.environ.get("CIPHER_CA_URL", "http://127.0.0.1:9000")
+    token_url = f"{ca_base_url}/v1/enroll/token"
+    cert_url = f"{ca_base_url}/v1/certificate"
 
     try:
-        resp = requests.post(url, json={"service_name": service_name})
+        token_resp = requests.post(
+            token_url,
+            json={"service_name": service_name},
+            headers={"X-Admin-Token": admin_token},
+        )
 
-        if resp.status_code == 200:
+        if token_resp.status_code != 200:
+            print("Could not mint bootstrap token:", token_resp.text)
+            return
+
+        bootstrap_token = token_resp.json()["bootstrap_token"]
+
+        cert_resp = requests.post(
+            cert_url,
+            json={
+                "service_name": service_name,
+                "bootstrap_token": bootstrap_token,
+            },
+        )
+
+        if cert_resp.status_code == 200:
             print(f"Service '{service_name}' enrolled via CA API.")
         else:
-            print("Enrollment failed:", resp.text)
+            print("Enrollment failed:", cert_resp.text)
 
     except Exception as e:
         print("Could not reach CA server.")
@@ -33,6 +55,7 @@ def enroll_service(service_name):
 
 def run_demo():
     from cipher.demo.proxy_demo import main
+
     main()
 
 
@@ -49,7 +72,9 @@ def print_usage():
     print("cipher-cli init")
     print("cipher-cli enroll <service>")
     print("cipher-cli demo")
-    print("cipher-cli ca-server\n")
+    print("cipher-cli ca-server")
+    print("env: CIPHER_ADMIN_TOKEN=<admin token>")
+    print("env: CIPHER_CA_URL=http://127.0.0.1:9000\n")
 
 
 def main():
