@@ -1,15 +1,18 @@
+from datetime import datetime, timedelta
+from pathlib import Path
+
 from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from datetime import datetime, timedelta
-from pathlib import Path
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
+
+from cipher.ca.stores import FileCertificateStore, FileKeyStore
 from cipher.config import CipherConfig
 
 
 class CertificateAuthority:
-    def __init__(self, config=None):
+    def __init__(self, config=None, key_store=None, certificate_store=None):
         self.config = config or CipherConfig()
 
         self.ca_dir = Path(self.config.get("paths", "ca_dir"))
@@ -17,6 +20,9 @@ class CertificateAuthority:
         self.trust_domain = self.config.get("ca", "trust_domain")
         self.key_size = self.config.get("ca", "key_size")
         self.cert_validity = self.config.get("ca", "cert_validity_hours")
+
+        self.key_store = key_store or FileKeyStore()
+        self.certificate_store = certificate_store or FileCertificateStore()
 
         self.ca_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -52,22 +58,24 @@ class CertificateAuthority:
             .not_valid_after(datetime.utcnow() + timedelta(days=3650))
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
-                critical=True
+                critical=True,
             )
             .sign(key, hashes.SHA256())
         )
 
-        with open(self.key_path, "wb") as f:
-            f.write(
-                key.private_bytes(
-                    serialization.Encoding.PEM,
-                    serialization.PrivateFormat.TraditionalOpenSSL,
-                    serialization.NoEncryption(),
-                )
-            )
+        self.key_store.write_private_key(
+            self.key_path,
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            ),
+        )
 
-        with open(self.cert_path, "wb") as f:
-            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        self.certificate_store.write_certificate(
+            self.cert_path,
+            cert.public_bytes(serialization.Encoding.PEM),
+        )
 
         print("Root CA created.")
 
@@ -78,15 +86,18 @@ class CertificateAuthority:
         service_key_path = service_dir / f"{service_name}.key"
         service_cert_path = service_dir / f"{service_name}.crt"
 
-        with open(self.key_path, "rb") as f:
-            ca_key = load_pem_private_key(f.read(), password=None)
+        ca_key = load_pem_private_key(
+            self.key_store.read_private_key(self.key_path),
+            password=None,
+        )
 
-        with open(self.cert_path, "rb") as f:
-            ca_cert = x509.load_pem_x509_certificate(f.read())
+        ca_cert = x509.load_pem_x509_certificate(
+            self.certificate_store.read_certificate(self.cert_path)
+        )
 
         service_key = rsa.generate_private_key(
             public_exponent=65537,
-            key_size=2048
+            key_size=2048,
         )
 
         spiffe_id = f"spiffe://{self.trust_domain}/service/{service_name}"
@@ -104,29 +115,31 @@ class CertificateAuthority:
             .not_valid_before(datetime.utcnow())
             .not_valid_after(datetime.utcnow() + timedelta(hours=self.cert_validity))
             .add_extension(
-                x509.SubjectAlternativeName(
-                    [x509.UniformResourceIdentifier(spiffe_id)]
-                ),
+                x509.SubjectAlternativeName([x509.UniformResourceIdentifier(spiffe_id)]),
                 critical=False,
             )
             .add_extension(
                 x509.ExtendedKeyUsage([
                     ExtendedKeyUsageOID.CLIENT_AUTH,
-                    ExtendedKeyUsageOID.SERVER_AUTH
+                    ExtendedKeyUsageOID.SERVER_AUTH,
                 ]),
                 critical=False,
             )
             .sign(ca_key, hashes.SHA256())
         )
 
-        with open(service_key_path, "wb") as f:
-            f.write(service_key.private_bytes(
+        self.key_store.write_private_key(
+            service_key_path,
+            service_key.private_bytes(
                 serialization.Encoding.PEM,
                 serialization.PrivateFormat.TraditionalOpenSSL,
                 serialization.NoEncryption(),
-            ))
+            ),
+        )
 
-        with open(service_cert_path, "wb") as f:
-            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        self.certificate_store.write_certificate(
+            service_cert_path,
+            cert.public_bytes(serialization.Encoding.PEM),
+        )
 
         print(f"Certificate issued for {service_name}")

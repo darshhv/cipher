@@ -2,3 +2,5 @@ cryptography
 PyJWT
 fastapi
 uvicorn
+requests
+PyYAML
