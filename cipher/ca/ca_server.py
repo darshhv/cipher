@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
@@ -51,7 +53,7 @@ def get_ca_cert():
 
 @app.post("/v1/enroll/token")
 def issue_bootstrap_token(req: TokenRequest, x_admin_token: str = Header(default="")):
-    if x_admin_token != admin_token:
+    if x_admin_token != api_admin_token:
         raise HTTPException(status_code=401, detail="unauthorized")
 
     token = tokens.mint(req.service_name)

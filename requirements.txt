@@ -3,3 +3,4 @@ PyJWT
 fastapi
 uvicorn
 requests
+PyYAML

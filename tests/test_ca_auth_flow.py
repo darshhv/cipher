@@ -7,7 +7,7 @@ import pytest
 from fastapi import HTTPException
 
 
-def _fake_yaml_module():
+def _fake_yaml_module(insecure_defaults=False):
     module = types.ModuleType("yaml")
 
     def safe_load(_stream):
@@ -33,6 +33,26 @@ def _fake_yaml_module():
     return module
 
 
+def _load_ca_server(monkeypatch, tmp_path: Path, insecure_defaults=False, env=None):
+    monkeypatch.chdir(tmp_path)
+    for key in [
+        "CIPHER_ENV",
+        "CIPHER_ADMIN_TOKEN",
+        "CIPHER_TOKEN_SECRET",
+        "CIPHER_TOKEN_ISSUER",
+        "CIPHER_TOKEN_AUDIENCE",
+        "CIPHER_TOKEN_TTL_SECONDS",
+    ]:
+        monkeypatch.delenv(key, raising=False)
+
+    for key, value in (env or {}).items():
+        monkeypatch.setenv(key, value)
+
+    (tmp_path / "cipher-config.yaml").write_text("placeholder: true\n")
+    monkeypatch.setitem(sys.modules, "yaml", _fake_yaml_module(insecure_defaults=insecure_defaults))
+
+    sys.modules.pop("cipher.ca.ca_server", None)
+    sys.modules.pop("cipher.config", None)
 def _load_ca_server(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "cipher-config.yaml").write_text("placeholder: true\n")
@@ -41,6 +61,14 @@ def _load_ca_server(monkeypatch, tmp_path: Path):
     import cipher.ca.ca_server as ca_server
 
     return importlib.reload(ca_server)
+
+
+
+def test_server_refuses_insecure_defaults_in_non_dev(monkeypatch, tmp_path):
+    with pytest.raises(RuntimeError) as exc:
+        _load_ca_server(monkeypatch, tmp_path, insecure_defaults=True, env={"CIPHER_ENV": "prod"})
+
+    assert "Refusing to start CA server" in str(exc.value)
 
 
 def test_enroll_token_requires_admin_header(monkeypatch, tmp_path):
