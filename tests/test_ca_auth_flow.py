@@ -21,6 +21,8 @@ def _fake_yaml_module(insecure_defaults=False):
             "policy": {"deny_threshold": 0.8, "throttle_threshold": 0.6},
             "telemetry": {"db_path": "./data/cipher_audit.db"},
             "api": {
+                "admin_token": "dev-admin-token-change-me" if insecure_defaults else "test-admin-token",
+                "token_secret": "dev-insecure-secret-change-me" if insecure_defaults else "this-is-a-long-enough-test-secret-32chars",
                 "admin_token": "test-admin-token",
                 "token_secret": "this-is-a-long-enough-test-secret-32chars",
                 "token_issuer": "cipher-ca",

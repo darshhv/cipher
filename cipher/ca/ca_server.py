@@ -30,6 +30,33 @@ def _cfg(section, key, default):
         return default
 
 
+def _cfg_env(env_key, section, key, default):
+    return os.environ.get(env_key, _cfg(section, key, default))
+
+
+def _ensure_secure_runtime(admin_token, token_secret):
+    env = os.environ.get("CIPHER_ENV", "dev").lower()
+    insecure_admin = admin_token == "dev-admin-token-change-me"
+    insecure_secret = token_secret == "dev-insecure-secret-change-me"
+
+    if env not in {"dev", "development", "test"} and (insecure_admin or insecure_secret):
+        raise RuntimeError(
+            "Refusing to start CA server in non-dev environment with insecure default API secrets. "
+            "Set CIPHER_ADMIN_TOKEN and CIPHER_TOKEN_SECRET (or api.admin_token/api.token_secret)."
+        )
+
+
+api_admin_token = _cfg_env("CIPHER_ADMIN_TOKEN", "api", "admin_token", "dev-admin-token-change-me")
+api_token_secret = _cfg_env("CIPHER_TOKEN_SECRET", "api", "token_secret", "dev-insecure-secret-change-me")
+
+_ensure_secure_runtime(api_admin_token, api_token_secret)
+
+tokens = BootstrapTokenManager(
+    secret=api_token_secret,
+    issuer=_cfg_env("CIPHER_TOKEN_ISSUER", "api", "token_issuer", "cipher-ca"),
+    audience=_cfg_env("CIPHER_TOKEN_AUDIENCE", "api", "token_audience", "cipher-ca"),
+    ttl_seconds=int(_cfg_env("CIPHER_TOKEN_TTL_SECONDS", "api", "token_ttl_seconds", 300)),
+)
 tokens = BootstrapTokenManager(
     secret=_cfg("api", "token_secret", "dev-insecure-secret-change-me"),
     issuer=_cfg("api", "token_issuer", "cipher-ca"),
