@@ -8,6 +8,7 @@ setup(
     install_requires=[
         "cryptography",
         "PyJWT",
+        "requests",
     ],
     entry_points={
         "console_scripts": [
