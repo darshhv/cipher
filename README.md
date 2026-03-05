@@ -89,6 +89,9 @@ cipher-cli init
 ### Enroll Services
 
 ```bash
+# (Required) set admin token used to mint bootstrap tokens
+export CIPHER_ADMIN_TOKEN=dev-admin-token-change-me
+
 # Enroll services and issue certificates
 cipher-cli enroll payment-api
 cipher-cli enroll user-service
@@ -105,9 +108,10 @@ cipher-cli enroll user-service
 # Start CA HTTP API server
 cipher-cli ca-server
 
-# Control plane listens on http://localhost:8000
+# Control plane listens on http://127.0.0.1:9000
 # Endpoints:
-#   POST /v1/certificate - Issue service certificate
+#   POST /v1/enroll/token - Mint bootstrap token (requires X-Admin-Token)
+#   POST /v1/certificate - Issue service certificate (requires bootstrap token)
 #   GET /v1/ca/cert - Retrieve root CA certificate
 ```
 
@@ -148,10 +152,20 @@ telemetry:
   log_level: INFO
   retention_days: 90
 
-server:
-  host: 0.0.0.0
-  port: 8000
-  enable_tls: false
+api:
+  admin_token: dev-admin-token-change-me
+  token_secret: dev-insecure-secret-change-me
+  token_issuer: cipher-ca
+  token_audience: cipher-ca
+  token_ttl_seconds: 300
+
+# Optional env overrides:
+#   CIPHER_ADMIN_TOKEN
+#   CIPHER_TOKEN_SECRET
+#   CIPHER_TOKEN_ISSUER
+#   CIPHER_TOKEN_AUDIENCE
+#   CIPHER_TOKEN_TTL_SECONDS
+#   CIPHER_ENV (set to prod/staging to block insecure defaults)
 ```
 
 Configuration file location can be specified via:
@@ -177,9 +191,14 @@ cipher-cli --config /path/to/config.yaml <command>
 
 **HTTP API Endpoints:**
 ```bash
+POST /v1/enroll/token
+  Headers: X-Admin-Token: <admin-token>
+  Body: { "service_name": "payment-api" }
+  Returns: { "service_name": "payment-api", "bootstrap_token": "..." }
+
 POST /v1/certificate
-  Body: { "service_identity": "payment-api", "csr_pem": "..." }
-  Returns: { "certificate_pem": "...", "root_ca_pem": "...", "spiffe_id": "..." }
+  Body: { "service_name": "payment-api", "bootstrap_token": "..." }
+  Returns: { "issued": "payment-api" }
 
 GET /v1/ca/cert
   Returns: Root CA certificate in PEM format
