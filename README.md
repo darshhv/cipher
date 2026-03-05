@@ -92,40 +92,6 @@ Environment overrides supported by CA API:
 - `CIPHER_ENV`
 - `CIPHER_CA_URL` (CLI only, default `http://127.0.0.1:9000`)
 
-```
-
-CLI entrypoint:
-
-```bash
-cipher-cli --help
-```
-
----
-
-## Configuration
-
-Cipher reads `cipher-config.yaml`.
-
-Important API auth settings:
-
-```yaml
-api:
-  admin_token: dev-admin-token-change-me
-  token_secret: dev-insecure-secret-change-me
-  token_issuer: cipher-ca
-  token_audience: cipher-ca
-  token_ttl_seconds: 300
-```
-
-Environment overrides supported by CA API:
-- `CIPHER_ADMIN_TOKEN`
-- `CIPHER_TOKEN_SECRET`
-- `CIPHER_TOKEN_ISSUER`
-- `CIPHER_TOKEN_AUDIENCE`
-- `CIPHER_TOKEN_TTL_SECONDS`
-- `CIPHER_ENV`
-- `CIPHER_CA_URL` (CLI only, default `http://127.0.0.1:9000`)
-
 ```bash
 # (Required) set admin token used to mint bootstrap tokens
 export CIPHER_ADMIN_TOKEN=dev-admin-token-change-me
@@ -358,17 +324,6 @@ Response:
 ```
 
 ---
-
-## Testing
-
-Run full test suite:
-
-```bash
-pytest -q
-```
-
-CI quality gates are defined in `.github/workflows/ci.yml` and run compile checks, tests, and an informational dependency audit.
-
 
 ## Testing
 
