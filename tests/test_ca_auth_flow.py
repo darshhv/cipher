@@ -21,8 +21,8 @@ def _fake_yaml_module(insecure_defaults=False):
             "policy": {"deny_threshold": 0.8, "throttle_threshold": 0.6},
             "telemetry": {"db_path": "./data/cipher_audit.db"},
             "api": {
-                "admin_token": "dev-admin-token-change-me" if insecure_defaults else "test-admin-token",
-                "token_secret": "dev-insecure-secret-change-me" if insecure_defaults else "this-is-a-long-enough-test-secret-32chars",
+                "admin_token": "test-admin-token",
+                "token_secret": "this-is-a-long-enough-test-secret-32chars",
                 "token_issuer": "cipher-ca",
                 "token_audience": "cipher-ca",
                 "token_ttl_seconds": 300,
@@ -53,6 +53,10 @@ def _load_ca_server(monkeypatch, tmp_path: Path, insecure_defaults=False, env=No
 
     sys.modules.pop("cipher.ca.ca_server", None)
     sys.modules.pop("cipher.config", None)
+def _load_ca_server(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "cipher-config.yaml").write_text("placeholder: true\n")
+    monkeypatch.setitem(sys.modules, "yaml", _fake_yaml_module())
 
     import cipher.ca.ca_server as ca_server
 
