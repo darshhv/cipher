@@ -9,6 +9,7 @@ setup(
         "cryptography",
         "PyJWT",
         "requests",
+        "PyYAML",
     ],
     entry_points={
         "console_scripts": [
