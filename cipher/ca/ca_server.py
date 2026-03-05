@@ -60,6 +60,14 @@ tokens = BootstrapTokenManager(
     audience=_cfg_env("CIPHER_TOKEN_AUDIENCE", "api", "token_audience", "cipher-ca"),
     ttl_seconds=int(_cfg_env("CIPHER_TOKEN_TTL_SECONDS", "api", "token_ttl_seconds", 300)),
 )
+tokens = BootstrapTokenManager(
+    secret=_cfg("api", "token_secret", "dev-insecure-secret-change-me"),
+    issuer=_cfg("api", "token_issuer", "cipher-ca"),
+    audience=_cfg("api", "token_audience", "cipher-ca"),
+    ttl_seconds=_cfg("api", "token_ttl_seconds", 300),
+)
+
+admin_token = _cfg("api", "admin_token", "dev-admin-token-change-me")
 
 
 @app.get("/")
@@ -91,6 +99,9 @@ def issue_bootstrap_token(req: TokenRequest, x_admin_token: str = Header(default
         reason="issued",
         details={"service_name": req.service_name},
     )
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    token = tokens.mint(req.service_name)
     return {"service_name": req.service_name, "bootstrap_token": token}
 
 
