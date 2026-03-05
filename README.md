@@ -25,6 +25,7 @@ Cipher currently provides:
 
 ### Data Plane / Runtime Components
 - **Certificate validator** (`cipher/services/cert_validator.py`) validates chain and extracts SPIFFE URI.
+- **Policy engine** (`cipher/policy/policy_engine.py`) provides deterministic rules (priority/action/path/method), risk scoring, and deny-by-default fallback.
 - **Policy engine** (`cipher/policy/policy_engine.py`) provides basic allowlist + risk-threshold logic.
 - **Telemetry** (`cipher/telemetry/audit_logging.py`) logs events to SQLite.
 - **Proxy/server demos** in `cipher/proxy/` and `cipher/services/`.
@@ -68,6 +69,29 @@ cipher-cli --help
 ---
 
 ## Configuration
+
+Cipher reads `cipher-config.yaml`.
+
+Important API auth settings:
+
+```yaml
+api:
+  admin_token: dev-admin-token-change-me
+  token_secret: dev-insecure-secret-change-me
+  token_issuer: cipher-ca
+  token_audience: cipher-ca
+  token_ttl_seconds: 300
+```
+
+Environment overrides supported by CA API:
+- `CIPHER_ADMIN_TOKEN`
+- `CIPHER_TOKEN_SECRET`
+- `CIPHER_TOKEN_ISSUER`
+- `CIPHER_TOKEN_AUDIENCE`
+- `CIPHER_TOKEN_TTL_SECONDS`
+- `CIPHER_ENV`
+- `CIPHER_CA_URL` (CLI only, default `http://127.0.0.1:9000`)
+
 ```bash
 # (Required) set admin token used to mint bootstrap tokens
 export CIPHER_ADMIN_TOKEN=dev-admin-token-change-me
@@ -169,6 +193,10 @@ Set admin token (for local default config):
 
 ```bash
 export CIPHER_ADMIN_TOKEN=dev-admin-token-change-me
+```
+
+Enroll:
+
 POST /v1/enroll/token
   Headers: X-Admin-Token: <admin-token>
   Body: { "service_name": "payment-api" }
@@ -298,6 +326,14 @@ Response:
 ---
 
 ## Testing
+
+Run full test suite:
+
+```bash
+pytest -q
+```
+
+CI quality gates are defined in `.github/workflows/ci.yml` and run compile checks, tests, and an informational dependency audit.
 
 Run auth-flow tests:
 

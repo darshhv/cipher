@@ -6,12 +6,15 @@ from pydantic import BaseModel
 from cipher.ca.bootstrap_tokens import BootstrapTokenManager
 from cipher.ca.certificate_authority import CertificateAuthority
 from cipher.config import CipherConfig
+from cipher.telemetry.audit_logging import CipherTelemetry
 
 app = FastAPI(title="Cipher CA Control Plane")
 
 config = CipherConfig()
 ca = CertificateAuthority(config)
 ca.initialize()
+
+telemetry = CipherTelemetry(db_path=config.get("telemetry", "db_path"))
 
 
 class CertificateRequest(BaseModel):
@@ -81,6 +84,21 @@ def get_ca_cert():
 @app.post("/v1/enroll/token")
 def issue_bootstrap_token(req: TokenRequest, x_admin_token: str = Header(default="")):
     if x_admin_token != api_admin_token:
+        telemetry.log_security_event(
+            event_type="enrollment.token_mint",
+            outcome="failure",
+            reason="unauthorized_admin_header",
+            details={"service_name": req.service_name},
+        )
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    token = tokens.mint(req.service_name)
+    telemetry.log_security_event(
+        event_type="enrollment.token_mint",
+        outcome="success",
+        reason="issued",
+        details={"service_name": req.service_name},
+    )
         raise HTTPException(status_code=401, detail="unauthorized")
 
     token = tokens.mint(req.service_name)
@@ -92,7 +110,20 @@ def issue_cert(req: CertificateRequest):
     try:
         tokens.validate(req.bootstrap_token, req.service_name)
     except Exception as exc:
+        telemetry.log_security_event(
+            event_type="enrollment.token_validate",
+            outcome="failure",
+            reason=str(exc),
+            details={"service_name": req.service_name},
+        )
         raise HTTPException(status_code=401, detail=f"invalid bootstrap token: {exc}")
 
     ca.issue_service_certificate(req.service_name)
+    telemetry.log_security_event(
+        event_type="certificate.issue",
+        outcome="success",
+        reason="issued",
+        destination_identity=req.service_name,
+        details={"service_name": req.service_name},
+    )
     return {"issued": req.service_name}

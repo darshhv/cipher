@@ -17,6 +17,9 @@ def enroll_service(service_name):
     import requests
 
     admin_token = os.environ.get("CIPHER_ADMIN_TOKEN", "dev-admin-token-change-me")
+    ca_base_url = os.environ.get("CIPHER_CA_URL", "http://127.0.0.1:9000")
+    token_url = f"{ca_base_url}/v1/enroll/token"
+    cert_url = f"{ca_base_url}/v1/certificate"
     token_url = "http://127.0.0.1:9000/v1/enroll/token"
     cert_url = "http://127.0.0.1:9000/v1/certificate"
 
@@ -72,6 +75,8 @@ def print_usage():
     print("cipher-cli enroll <service>")
     print("cipher-cli demo")
     print("cipher-cli ca-server")
+    print("env: CIPHER_ADMIN_TOKEN=<admin token>")
+    print("env: CIPHER_CA_URL=http://127.0.0.1:9000\n")
     print("env: CIPHER_ADMIN_TOKEN=<admin token>\n")
 
 

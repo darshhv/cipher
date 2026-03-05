@@ -1,4 +1,5 @@
 import importlib
+import sqlite3
 import sys
 import types
 from pathlib import Path
@@ -65,6 +66,13 @@ def _load_ca_server(monkeypatch, tmp_path: Path):
     return importlib.reload(ca_server)
 
 
+def _fetch_events(tmp_path):
+    db = tmp_path / "data" / "cipher_audit.db"
+    conn = sqlite3.connect(db)
+    rows = conn.execute("SELECT event_type, outcome, reason FROM security_events").fetchall()
+    conn.close()
+    return rows
+
 
 def test_server_refuses_insecure_defaults_in_non_dev(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError) as exc:
@@ -84,6 +92,8 @@ def test_enroll_token_requires_admin_header(monkeypatch, tmp_path):
 
     assert exc.value.status_code == 401
     assert exc.value.detail == "unauthorized"
+    events = _fetch_events(tmp_path)
+    assert ("enrollment.token_mint", "failure", "unauthorized_admin_header") in events
 
 
 def test_enroll_token_with_admin_header_returns_token(monkeypatch, tmp_path):
@@ -151,3 +161,6 @@ def test_certificate_issuance_succeeds_with_valid_token(monkeypatch, tmp_path):
     assert response == {"issued": "payment-api"}
     assert (tmp_path / "data" / "payment-api" / "payment-api.crt").exists()
     assert (tmp_path / "data" / "payment-api" / "payment-api.key").exists()
+    events = _fetch_events(tmp_path)
+    assert ("enrollment.token_mint", "success", "issued") in events
+    assert ("certificate.issue", "success", "issued") in events
